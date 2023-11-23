@@ -1,3 +1,4 @@
+# importing libraries
 import itertools
 from collections import Counter
 from typing import Dict, List, Tuple
@@ -5,11 +6,14 @@ import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
+
+# importing functions from other modules
 from similarity_metrics.config import MODEL_PATH
 from similarity_metrics.utils.io_utils import save_model
 from similarity_metrics.utils.logger import logger
 
 
+# The Sequences class encapsulates operations on sequences for a dataset
 class Sequences:
     NEGATIVE_SAMPLE_TABLE_SIZE = 1e7
     WINDOW = 5
@@ -25,8 +29,8 @@ class Sequences:
         """
         self.negative_idx = 0
         self.n_unique_tokens = 0
-
         self.sequences = np.load(sequence_path).tolist()
+
         self.n_sequences = len(self.sequences)
         logger.info('Sequences loaded (length = {:,})'.format(self.n_sequences))
 
@@ -39,32 +43,27 @@ class Sequences:
         self.word2id, self.id2word = self.get_mapping_dicts()
         self.add_val_product_to_mapping_dicts()
         self.n_unique_tokens = len(self.word2id)
+
         logger.info('No. of unique tokens: {}'.format(self.n_unique_tokens))
         save_model(self.word2id, '{}/word2id'.format(MODEL_PATH))
         save_model(self.id2word, '{}/id2word'.format(MODEL_PATH))
-        logger.info('Word2Id and Id2Word created and saved')
 
+        logger.info('Word2Id and Id2Word created and saved')
         self.sequences = self.convert_sequence_to_id()
         self.word_freq = self.convert_word_freq_to_id()
-        logger.info('Convert sequence and wordfreq to ID')
 
+        logger.info('Convert sequence and wordfreq to ID')
         self.discard_probs = self.get_discard_probs(sample=subsample)
         logger.info('Discard probability calculated')
 
         self.neg_table = self.get_negative_sample_table(power=power)
         logger.info('Negative sample table created')
 
-        # Used to preload all center context pairs (very memory heavy)
-        # self.pairs = self.get_all_center_context_pairs(window=window)
-        # self.n_pairs = len(self.pairs)
-        # logger.info('Center Context pairs created')
 
+    # Get word frequency counts
     def get_word_freq(self) -> Counter:
         """
         Returns a dictionary of word frequencies.
-
-        Returns:
-
         """
         # Flatten list
         seq_flat = list(itertools.chain.from_iterable(self.sequences))
@@ -74,11 +73,12 @@ class Sequences:
 
         return word_freq
 
+    # Create word-to-id and id-to-word mapping dictionaries
     def get_mapping_dicts(self):
         word2id = dict()
         id2word = dict()
-
         wid = 0
+
         for w, c in self.word_freq.items():
             word2id[w] = wid
             id2word[wid] = w
@@ -86,11 +86,12 @@ class Sequences:
 
         return word2id, id2word
 
+    # Add validation product IDs to mapping dictionaries
     def add_val_product_to_mapping_dicts(self):
         val_product_set = set(self.val['product1'].values).union(set(self.val['product2'].values))
-
         logger.info('Adding val products to word2id, original size: {}'.format(len(self.word2id)))
         wid = max(self.word2id.values()) + 1
+
         for w in val_product_set:
             if w not in self.word2id:
                 self.word2id[w] = wid
@@ -100,25 +101,23 @@ class Sequences:
         self.val = None  # Release memory
         logger.info('Added val products to word2id, updated size: {}'.format(len(self.word2id)))
 
+    # Convert sequences to word IDs
     def convert_sequence_to_id(self):
         return np.vectorize(self.word2id.get)(self.sequences)
 
+    # Get ID of a word or return -1 if not found
     def get_product_id(self, x):
         return self.word2id.get(x, -1)
 
+    # Convert word frequencies to word ID frequencies
     def convert_word_freq_to_id(self):
         return {self.word2id[k]: v for k, v in self.word_freq.items()}
 
+    # Calculate discard probabilities for subsampling
     def get_discard_probs(self, sample=0.001) -> Dict[int, float]:
         """
         Returns a dictionary of words and their associated discard probability, where the word should be discarded
         if np.random.rand() < probability.
-
-        Args:
-            sample:
-
-        Returns:
-
         """
         # Convert to array
         word_freq = np.array(list(self.word_freq.items()), dtype=np.float64)
@@ -127,7 +126,6 @@ class Sequences:
         word_freq[:, 1] = word_freq[:, 1] / word_freq[:, 1].sum()
 
         # Perform subsampling
-        # http://mccormickml.com/2017/01/11/word2vec-tutorial-part-2-negative-sampling/
         word_freq[:, 1] = (np.sqrt(word_freq[:, 1] / sample) + 1) * (sample / word_freq[:, 1])
 
         # Get dict
@@ -135,15 +133,10 @@ class Sequences:
 
         return discard_probs
 
+    # Create a table for negative sampling
     def get_negative_sample_table(self, power=0.75) -> np.array:
         """
         Returns a table (size = NEGATIVE_SAMPLE_TABLE_SIZE) of negative samples which can be selected via indexing.
-
-        Args:
-            power:
-
-        Returns:
-
         """
         # Convert to array
         word_freq = np.array(list(self.word_freq.items()), dtype=np.float64)
@@ -182,15 +175,10 @@ class Sequences:
 
         return pairs
 
+    # Get all center-context pairs in all sequences
     def get_all_center_context_pairs(self, window=5) -> List[Tuple[int, int]]:
         """
-        Returns a list of tuples (center, context).
-
-        Args:
-            window:
-
-        Returns:
-
+        Returns a list of tuples (center, context)
         """
 
         pairs = []
@@ -206,15 +194,10 @@ class Sequences:
 
         return pairs
 
+    # Get negative samples for a given context word
     def get_negative_samples(self, context, sample_size=5) -> np.array:
         """
         Returns a list of negative samples, where len = sample_size.
-
-        Args:
-            sample_size:
-
-        Returns:
-
         """
         while True:
             # Get a batch from the shuffled table
@@ -232,6 +215,7 @@ class Sequences:
                 return neg_sample
 
 
+# Dataset class for sequences
 class SequencesDataset(Dataset):
     def __init__(self, sequences: Sequences, neg_sample_size=5):
         self.sequences = sequences
@@ -250,13 +234,11 @@ class SequencesDataset(Dataset):
 
     @staticmethod
     def collate(batches):
-        # logger.info('Batches: {}'.format(batches))
         pairs_batch = [batch[0] for batch in batches]
         neg_contexts_batch = [batch[1] for batch in batches]
-
         pairs_batch = list(itertools.chain.from_iterable(pairs_batch))
-        neg_contexts = list(itertools.chain.from_iterable(neg_contexts_batch))
 
+        neg_contexts = list(itertools.chain.from_iterable(neg_contexts_batch))
         centers = [center for center, _ in pairs_batch]
         contexts = [context for _, context in pairs_batch]
 
@@ -281,7 +263,6 @@ class SequencesDataset(Dataset):
             batch_list.append(all_arr)
 
         batch_array = np.vstack(batch_list)
-        # np.random.shuffle(batch_array)
 
         # Return item1, item2, label
         return (torch.LongTensor(batch_array[:, 0]), torch.LongTensor(batch_array[:, 1]),
