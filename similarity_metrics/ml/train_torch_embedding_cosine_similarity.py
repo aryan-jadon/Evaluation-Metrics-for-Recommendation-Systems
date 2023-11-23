@@ -1,3 +1,4 @@
+# importing libraries
 import argparse
 import datetime
 import numpy as np
@@ -7,6 +8,8 @@ import torch.nn.functional as F
 from sklearn.metrics import roc_auc_score
 from torch import optim
 from torch.utils.data import DataLoader
+
+# importing modules from others class
 from similarity_metrics.config import MODEL_PATH
 from similarity_metrics.ml.data_loader import Sequences, SequencesDataset
 from similarity_metrics.ml.skipgram import SkipGram

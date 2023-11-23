@@ -1,11 +1,14 @@
+# importing libraries
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+# Set a random seed for reproducibility
 torch.manual_seed(1368)
 
 
+# Define a SkipGram neural network model using PyTorch
 class SkipGram(nn.Module):
 
     def __init__(self, emb_size, emb_dim):
@@ -19,31 +22,16 @@ class SkipGram(nn.Module):
     def init_emb(self):
         """
         Init embeddings like word2vec
-
         Center embeddings have uniform distribution in [-0.5/emb_dim , 0.5/emb_dim].
         Context embeddings are initialized with 0s.
-
-        Returns:
-
         """
         emb_range = 0.5 / self.emb_dim
 
         # Initializing embeddings:
-        # https://stackoverflow.com/questions/55276504/different-methods-for-initializing-embedding-layer-weights-in-pytorch
         self.center_embeddings.weight.data.uniform_(-emb_range, emb_range)
         self.context_embeddings.weight.data.uniform_(0, 0)
 
     def forward(self, center, context, neg_context):
-        """
-
-        Args:
-            center: List of center words
-            context: List of context words
-            neg_context: List of list of negative context words
-
-        Returns:
-
-        """
         # Calculate positive score
         emb_center = self.center_embeddings(center)  # Get embeddings for center word
         emb_context = self.context_embeddings(context)  # Get embeddings for context word
