@@ -4,6 +4,7 @@ import datetime
 import numpy as np
 import pandas as pd
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from sklearn.metrics import roc_auc_score
 from torch import optim
@@ -19,6 +20,24 @@ shuffle = True
 emb_dim = 128
 epochs = 5
 initial_lr = 0.025
+
+
+class JaccardIndex(nn.Module):
+    def __init__(self):
+        super(JaccardIndex, self).__init__()
+
+    def forward(self, x1, x2):
+        # Ensure the vectors are binary
+        x1 = torch.round(torch.sigmoid(x1))
+        x2 = torch.round(torch.sigmoid(x2))
+
+        intersection = torch.sum(torch.min(x1, x2), dim=1)
+        union = torch.sum(torch.max(x1, x2), dim=1)
+
+        # Calculate the Jaccard Index
+        jaccard_index = intersection / (union + 1e-7)  # Adding a small constant to avoid division by zero
+        return jaccard_index
+
 
 # Torch parameters
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -47,7 +66,8 @@ if __name__ == '__main__':
     word2id_func = np.vectorize(sequences.get_product_id)
     val_samp['product1_id'] = word2id_func(val_samp['product1'].values)
     val_samp['product2_id'] = word2id_func(val_samp['product2'].values)
-    val_samp = val_samp[(val_samp['product1_id'] > -1) & (val_samp['product2_id'] > -1)]  # Keep those with valid ID
+    val_samp = val_samp[(val_samp['product1_id'] > -1) & (val_samp['product2_id'] > -1)]
+    # Keep those with valid ID
     logger.info('No. of validation samples: {}'.format(val_samp.shape[0]))
 
     product1_id = val_samp['product1_id'].values
@@ -85,12 +105,18 @@ if __name__ == '__main__':
                 with torch.no_grad():
                     product1_emb = skipgram.get_center_emb(torch.LongTensor(product1_id).to(device))
                     product2_emb = skipgram.get_center_emb(torch.LongTensor(product2_id).to(device))
-                    cos_sim = F.cosine_similarity(product1_emb, product2_emb)
-                    score = roc_auc_score(val_samp['edge'], cos_sim.detach().cpu().numpy())
 
-                logger.info("Epoch: {}, Seq: {:,}/{:,}, " \
-                            "Loss: {:.4f}, AUC-ROC: {:.4f}, Lr: {:.6f}".format(epoch, i, len(dataloader), running_loss,
-                                                                               score, optimizer.param_groups[0]['lr']))
+                    # Example Usage
+                    jaccard_index = JaccardIndex()
+                    jaccard_index_calculations = jaccard_index(product1_emb, product2_emb)
+                    score = roc_auc_score(val_samp['edge'], jaccard_index_calculations.detach().cpu().numpy())
+
+                logger.info("Epoch: {}, "
+                            "Seq: {:,}/{:,}, " \
+                            "Loss: {:.4f}, AUC-ROC: {:.4f}, Lr: {:.6f}".format(epoch, i, len(dataloader),
+                                                                               running_loss,
+                                                                               score,
+                                                                               optimizer.param_groups[0]['lr']))
                 results.append([epoch, i, running_loss, score])
                 running_loss = 0
 
@@ -106,4 +132,4 @@ if __name__ == '__main__':
 
     # Save results
     results_df = pd.DataFrame(results, columns=['epoch', 'batches', 'loss', 'auc'])
-    results_df.to_csv('{}/model_metrics_cosine_similarity.csv'.format(MODEL_PATH), index=False)
+    results_df.to_csv('{}/model_metrics_jaccard_index_similarity.csv'.format(MODEL_PATH), index=False)

@@ -4,6 +4,7 @@ import datetime
 import numpy as np
 import pandas as pd
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from sklearn.metrics import roc_auc_score
 from torch import optim
@@ -17,12 +18,28 @@ from similarity_metrics.utils.logger import logger
 
 shuffle = True
 emb_dim = 128
-epochs = 5
+epochs = 3
 initial_lr = 0.025
+
+
+class AdjustedCosineSimilarity(nn.Module):
+    def __init__(self):
+        super(AdjustedCosineSimilarity, self).__init__()
+
+    def forward(self, x1, x2):
+        # Mean-centering the vectors
+        x1_mean_centered = x1 - x1.mean(dim=1, keepdim=True)
+        x2_mean_centered = x2 - x2.mean(dim=1, keepdim=True)
+
+        # Compute cosine similarity
+        similarity = F.cosine_similarity(x1_mean_centered, x2_mean_centered, dim=1)
+        return similarity
+
 
 # Torch parameters
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 torch.cuda.set_device(0)
+
 logger.info('Device: {}, emb_dim: {}, epochs: {}, initial_lr: {}'.format(device, emb_dim, epochs, initial_lr))
 
 if __name__ == '__main__':
@@ -47,7 +64,8 @@ if __name__ == '__main__':
     word2id_func = np.vectorize(sequences.get_product_id)
     val_samp['product1_id'] = word2id_func(val_samp['product1'].values)
     val_samp['product2_id'] = word2id_func(val_samp['product2'].values)
-    val_samp = val_samp[(val_samp['product1_id'] > -1) & (val_samp['product2_id'] > -1)]  # Keep those with valid ID
+    val_samp = val_samp[(val_samp['product1_id'] > -1) & (val_samp['product2_id'] > -1)]
+    # Keep those with valid ID
     logger.info('No. of validation samples: {}'.format(val_samp.shape[0]))
 
     product1_id = val_samp['product1_id'].values
@@ -85,12 +103,19 @@ if __name__ == '__main__':
                 with torch.no_grad():
                     product1_emb = skipgram.get_center_emb(torch.LongTensor(product1_id).to(device))
                     product2_emb = skipgram.get_center_emb(torch.LongTensor(product2_id).to(device))
-                    cos_sim = F.cosine_similarity(product1_emb, product2_emb)
-                    score = roc_auc_score(val_samp['edge'], cos_sim.detach().cpu().numpy())
 
-                logger.info("Epoch: {}, Seq: {:,}/{:,}, " \
-                            "Loss: {:.4f}, AUC-ROC: {:.4f}, Lr: {:.6f}".format(epoch, i, len(dataloader), running_loss,
-                                                                               score, optimizer.param_groups[0]['lr']))
+                    # Example Usage
+                    adjusted_cosine_similarity = AdjustedCosineSimilarity()
+                    adjusted_cosine_similarity_calculations = adjusted_cosine_similarity(product1_emb, product2_emb)
+                    score = roc_auc_score(val_samp['edge'],
+                                          adjusted_cosine_similarity_calculations.detach().cpu().numpy())
+
+                logger.info("Epoch: {}, "
+                            "Seq: {:,}/{:,}, " \
+                            "Loss: {:.4f}, AUC-ROC: {:.4f}, Lr: {:.6f}".format(epoch, i, len(dataloader),
+                                                                               running_loss,
+                                                                               score,
+                                                                               optimizer.param_groups[0]['lr']))
                 results.append([epoch, i, running_loss, score])
                 running_loss = 0
 
@@ -106,4 +131,4 @@ if __name__ == '__main__':
 
     # Save results
     results_df = pd.DataFrame(results, columns=['epoch', 'batches', 'loss', 'auc'])
-    results_df.to_csv('{}/model_metrics_cosine_similarity.csv'.format(MODEL_PATH), index=False)
+    results_df.to_csv('{}/model_metrics_adjusted_cosine_similarity.csv'.format(MODEL_PATH), index=False)
