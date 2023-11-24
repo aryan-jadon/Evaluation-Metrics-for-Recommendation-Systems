@@ -1,6 +1,3 @@
-"""
-Parses the raw json data into csv file for faster loading into pd.DataFrame.
-"""
 import argparse
 import csv
 import gzip
@@ -41,12 +38,6 @@ def parse_json_to_df(path: str) -> pd.DataFrame:
 def lowercase_df(df: pd.DataFrame) -> pd.DataFrame:
     """
     Lowercase characters from all columns in a dataframe.
-
-    Args:
-        df: Pandas dataframe
-
-    Returns:
-        Lowercased dataframe
     """
     df = df.copy()
     for col in df.columns:
@@ -58,13 +49,6 @@ def lowercase_df(df: pd.DataFrame) -> pd.DataFrame:
 def lowercase_cols(df: pd.DataFrame, colnames: List[str]) -> pd.DataFrame:
     """
     Lowercase characters from specified columns in a dataframe
-
-    Args:
-        df: Pandas dataframe
-        colnames (List): Names of columns to be lowercased
-
-    Returns: Lowercased dataframe
-
     """
     df = df.copy()
     for col in colnames:
@@ -77,13 +61,6 @@ def lowercase_cols(df: pd.DataFrame, colnames: List[str]) -> pd.DataFrame:
 def parse_json_to_csv(read_path: str, write_path: str) -> None:
     """
     Note: This assumes that the first json in the path has all the keys, which could be WRONG
-
-    Args:
-        read_path:
-        write_path:
-
-    Returns:
-
     """
     csv_writer = csv.writer(open(write_path, 'w'))
     i = 0
