@@ -27,9 +27,49 @@ class EuclideanDistance(nn.Module):
         return torch.sqrt(torch.sum((x1 - x2) ** 2, dim=1))
 
 
+class JaccardIndex(nn.Module):
+    def __init__(self):
+        super(JaccardIndex, self).__init__()
+
+    def forward(self, x1, x2):
+        # Ensure the vectors are binary
+        x1 = torch.round(torch.sigmoid(x1))
+        x2 = torch.round(torch.sigmoid(x2))
+
+        intersection = torch.sum(torch.min(x1, x2), dim=1)
+        union = torch.sum(torch.max(x1, x2), dim=1)
+
+        # Calculate the Jaccard Index
+        jaccard_index = intersection / (union + 1e-7)  # Adding a small constant to avoid division by zero
+        return jaccard_index
+
+
+class HammingDistance(nn.Module):
+    def __init__(self):
+        super(HammingDistance, self).__init__()
+
+    def forward(self, x1, x2):
+        # Assuming x1 and x2 are binary tensors
+        return torch.sum(torch.abs(x1 - x2), dim=1)
+
+
+class AdjustedCosineSimilarity(nn.Module):
+    def __init__(self):
+        super(AdjustedCosineSimilarity, self).__init__()
+
+    def forward(self, x1, x2):
+        # Mean-centering the vectors
+        x1_mean_centered = x1 - x1.mean(dim=1, keepdim=True)
+        x2_mean_centered = x2 - x2.mean(dim=1, keepdim=True)
+
+        # Compute cosine similarity
+        similarity = F.cosine_similarity(x1_mean_centered, x2_mean_centered, dim=1)
+        return similarity
+
+
 # Torch parameters
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-torch.cuda.set_device(0)
+# device = torch.device("mps")
+device = torch.device("cpu")
 logger.info('Device: {}, emb_dim: {}, epochs: {}, initial_lr: {}'.format(device, emb_dim, epochs, initial_lr))
 
 if __name__ == '__main__':
@@ -94,11 +134,12 @@ if __name__ == '__main__':
                     product1_emb = skipgram.get_center_emb(torch.LongTensor(product1_id).to(device))
                     product2_emb = skipgram.get_center_emb(torch.LongTensor(product2_id).to(device))
 
-                    # Compute Euclidean Distance
-                    # Example Usage
-                    euclidean_distance = EuclideanDistance()
-                    euclidean_distance_calculations = euclidean_distance(product1_emb, product2_emb)
-                    score = roc_auc_score(val_samp['edge'], euclidean_distance_calculations.detach().cpu().numpy())
+                    # Compute the Pearson Correlation Coefficient
+                    # Normalize the embeddings to have zero mean
+                    product1_emb_normalized = product1_emb - product1_emb.mean()
+                    product2_emb_normalized = product2_emb - product2_emb.mean()
+                    pearson_corr = F.cosine_similarity(product1_emb_normalized, product2_emb_normalized)
+                    score = roc_auc_score(val_samp['edge'], pearson_corr.detach().cpu().numpy())
 
                 logger.info("Epoch: {}, "
                             "Seq: {:,}/{:,}, " \
@@ -121,4 +162,4 @@ if __name__ == '__main__':
 
     # Save results
     results_df = pd.DataFrame(results, columns=['epoch', 'batches', 'loss', 'auc'])
-    results_df.to_csv('{}/model_metrics_euclidean_distance_similarity.csv'.format(MODEL_PATH), index=False)
+    results_df.to_csv('{}/model_metrics_pearson_correlation_coefficient_similarity.csv'.format(MODEL_PATH), index=False)

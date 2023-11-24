@@ -1,17 +1,21 @@
+# importing libraries
 import argparse
 import datetime
 import numpy as np
 import pandas as pd
+import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from sklearn.metrics import roc_auc_score
 from torch import optim
 from torch.utils.data import DataLoader
-from src.config import MODEL_PATH
-from src.ml.data_loader import Sequences, SequencesDataset
-from src.ml.skipgram import SkipGram
-from src.utils.logger import logger
-import torch
-import torch.nn as nn
+
+# importing modules from others class
+from similarity_metrics.config import MODEL_PATH
+from similarity_metrics.ml.data_loader import Sequences, SequencesDataset
+from similarity_metrics.ml.skipgram import SkipGram
+from similarity_metrics.utils.logger import logger
+
 
 shuffle = True
 emb_dim = 128
@@ -19,12 +23,12 @@ epochs = 3
 initial_lr = 0.025
 
 
-class EuclideanDistance(nn.Module):
+class ManhattanDistance(nn.Module):
     def __init__(self):
-        super(EuclideanDistance, self).__init__()
+        super(ManhattanDistance, self).__init__()
 
     def forward(self, x1, x2):
-        return torch.sqrt(torch.sum((x1 - x2) ** 2, dim=1))
+        return torch.sum(torch.abs(x1 - x2), dim=1)
 
 
 # Torch parameters
@@ -94,11 +98,10 @@ if __name__ == '__main__':
                     product1_emb = skipgram.get_center_emb(torch.LongTensor(product1_id).to(device))
                     product2_emb = skipgram.get_center_emb(torch.LongTensor(product2_id).to(device))
 
-                    # Compute Euclidean Distance
                     # Example Usage
-                    euclidean_distance = EuclideanDistance()
-                    euclidean_distance_calculations = euclidean_distance(product1_emb, product2_emb)
-                    score = roc_auc_score(val_samp['edge'], euclidean_distance_calculations.detach().cpu().numpy())
+                    manhattan_distance = ManhattanDistance()
+                    distance_calculations = manhattan_distance(product1_emb, product2_emb)
+                    score = roc_auc_score(val_samp['edge'], distance_calculations.detach().cpu().numpy())
 
                 logger.info("Epoch: {}, "
                             "Seq: {:,}/{:,}, " \
@@ -121,4 +124,4 @@ if __name__ == '__main__':
 
     # Save results
     results_df = pd.DataFrame(results, columns=['epoch', 'batches', 'loss', 'auc'])
-    results_df.to_csv('{}/model_metrics_euclidean_distance_similarity.csv'.format(MODEL_PATH), index=False)
+    results_df.to_csv('{}/model_metrics_manhattan_distance_similarity.csv'.format(MODEL_PATH), index=False)
