@@ -80,8 +80,7 @@ if __name__ == '__main__':
     parser.add_argument('write_path', type=str, help='Path to output csv (of nodes relationships)')
     args = parser.parse_args()
 
-    df = pd.read_csv(args.read_path, error_bad_lines=False, warn_bad_lines=True,
-                     dtype={'asin': 'str', 'title': 'str', 'brand': 'str'})
+    df = pd.read_csv(args.read_path, dtype={'asin': 'str', 'title': 'str', 'brand': 'str'})
     logger.info('DF shape: {}'.format(df.shape))
 
     exploded_df = get_node_relationship(df)

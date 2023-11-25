@@ -70,8 +70,7 @@ if __name__ == '__main__':
                         default=None)
     args = parser.parse_args()
 
-    df = pd.read_csv(args.read_path, error_bad_lines=False, warn_bad_lines=True,
-                     dtype={'asin': 'str', 'related': 'str'})
+    df = pd.read_csv(args.read_path, dtype={'asin': 'str', 'related': 'str'})
     logger.info('DF shape: {}'.format(df.shape))
 
     # Sample for development efficiency

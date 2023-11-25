@@ -147,8 +147,7 @@ if __name__ == '__main__':
     parser.add_argument('val_prop', type=float, help='Proportion of validation set (e.g., 0.33)')
     args = parser.parse_args()
 
-    df = pd.read_csv(args.read_path, error_bad_lines=False, warn_bad_lines=True,
-                     dtype={'product1': 'str', 'product2': 'str'})
+    df = pd.read_csv(args.read_path, dtype={'product1': 'str', 'product2': 'str'})
     logger.info('DF shape: {}'.format(df.shape))
 
     train, val = get_train_and_val(df, val_prop=args.val_prop)

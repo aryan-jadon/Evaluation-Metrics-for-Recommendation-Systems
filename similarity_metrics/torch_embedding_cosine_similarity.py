@@ -22,7 +22,6 @@ initial_lr = 0.025
 
 # Torch parameters
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-torch.cuda.set_device(0)
 logger.info('Device: {}, emb_dim: {}, epochs: {}, initial_lr: {}'.format(device, emb_dim, epochs, initial_lr))
 
 if __name__ == '__main__':
