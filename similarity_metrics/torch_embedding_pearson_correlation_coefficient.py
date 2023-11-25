@@ -1,75 +1,28 @@
+# importing libraries
 import argparse
 import datetime
 import numpy as np
 import pandas as pd
-import torch.nn.functional as F
 from sklearn.metrics import roc_auc_score
+import torch.nn.functional as F
+import torch
 from torch import optim
 from torch.utils.data import DataLoader
-from src.config import MODEL_PATH
-from src.ml.data_loader import Sequences, SequencesDataset
-from src.ml.skipgram import SkipGram
-from src.utils.logger import logger
-import torch
-import torch.nn as nn
+
+# importing modules from others class
+from similarity_metrics.config import MODEL_PATH
+from similarity_metrics.data_loader import Sequences, SequencesDataset
+from similarity_metrics.skipgram import SkipGram
+from similarity_metrics.utils.logger import logger
 
 shuffle = True
 emb_dim = 128
-epochs = 3
+epochs = 5
 initial_lr = 0.025
 
-
-class EuclideanDistance(nn.Module):
-    def __init__(self):
-        super(EuclideanDistance, self).__init__()
-
-    def forward(self, x1, x2):
-        return torch.sqrt(torch.sum((x1 - x2) ** 2, dim=1))
-
-
-class JaccardIndex(nn.Module):
-    def __init__(self):
-        super(JaccardIndex, self).__init__()
-
-    def forward(self, x1, x2):
-        # Ensure the vectors are binary
-        x1 = torch.round(torch.sigmoid(x1))
-        x2 = torch.round(torch.sigmoid(x2))
-
-        intersection = torch.sum(torch.min(x1, x2), dim=1)
-        union = torch.sum(torch.max(x1, x2), dim=1)
-
-        # Calculate the Jaccard Index
-        jaccard_index = intersection / (union + 1e-7)  # Adding a small constant to avoid division by zero
-        return jaccard_index
-
-
-class HammingDistance(nn.Module):
-    def __init__(self):
-        super(HammingDistance, self).__init__()
-
-    def forward(self, x1, x2):
-        # Assuming x1 and x2 are binary tensors
-        return torch.sum(torch.abs(x1 - x2), dim=1)
-
-
-class AdjustedCosineSimilarity(nn.Module):
-    def __init__(self):
-        super(AdjustedCosineSimilarity, self).__init__()
-
-    def forward(self, x1, x2):
-        # Mean-centering the vectors
-        x1_mean_centered = x1 - x1.mean(dim=1, keepdim=True)
-        x2_mean_centered = x2 - x2.mean(dim=1, keepdim=True)
-
-        # Compute cosine similarity
-        similarity = F.cosine_similarity(x1_mean_centered, x2_mean_centered, dim=1)
-        return similarity
-
-
 # Torch parameters
-# device = torch.device("mps")
-device = torch.device("cpu")
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+torch.cuda.set_device(0)
 logger.info('Device: {}, emb_dim: {}, epochs: {}, initial_lr: {}'.format(device, emb_dim, epochs, initial_lr))
 
 if __name__ == '__main__':

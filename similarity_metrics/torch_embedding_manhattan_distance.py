@@ -5,29 +5,27 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from sklearn.metrics import roc_auc_score
 from torch import optim
 from torch.utils.data import DataLoader
 
 # importing modules from others class
 from similarity_metrics.config import MODEL_PATH
-from similarity_metrics.ml.data_loader import Sequences, SequencesDataset
-from similarity_metrics.ml.skipgram import SkipGram
+from similarity_metrics.data_loader import Sequences, SequencesDataset
+from similarity_metrics.skipgram import SkipGram
 from similarity_metrics.utils.logger import logger
 
 shuffle = True
 emb_dim = 128
-epochs = 3
+epochs = 5
 initial_lr = 0.025
 
 
-class HammingDistance(nn.Module):
+class ManhattanDistance(nn.Module):
     def __init__(self):
-        super(HammingDistance, self).__init__()
+        super(ManhattanDistance, self).__init__()
 
     def forward(self, x1, x2):
-        # Assuming x1 and x2 are binary tensors
         return torch.sum(torch.abs(x1 - x2), dim=1)
 
 
@@ -95,21 +93,13 @@ if __name__ == '__main__':
             if i > 0 and i % 1000 == 0:
                 # Validation Check
                 with torch.no_grad():
-
                     product1_emb = skipgram.get_center_emb(torch.LongTensor(product1_id).to(device))
                     product2_emb = skipgram.get_center_emb(torch.LongTensor(product2_id).to(device))
 
                     # Example Usage
-                    hamming_distance = HammingDistance()
-                    # Convert embeddings to binary (example using a threshold)
-                    threshold = 0.5
-                    product1_binary = (product1_emb > threshold).float()
-                    product2_binary = (product2_emb > threshold).float()
-
-                    # Compute Hamming Distance
-                    hamming_distance_calculations = hamming_distance(product1_binary, product2_binary)
-                    score = roc_auc_score(val_samp['edge'], hamming_distance_calculations.detach().cpu().numpy())
-
+                    manhattan_distance = ManhattanDistance()
+                    distance_calculations = manhattan_distance(product1_emb, product2_emb)
+                    score = roc_auc_score(val_samp['edge'], distance_calculations.detach().cpu().numpy())
 
                 logger.info("Epoch: {}, "
                             "Seq: {:,}/{:,}, " \
@@ -132,4 +122,4 @@ if __name__ == '__main__':
 
     # Save results
     results_df = pd.DataFrame(results, columns=['epoch', 'batches', 'loss', 'auc'])
-    results_df.to_csv('{}/model_metrics_hamming_distance_similarity.csv'.format(MODEL_PATH), index=False)
+    results_df.to_csv('{}/model_metrics_manhattan_distance_similarity.csv'.format(MODEL_PATH), index=False)

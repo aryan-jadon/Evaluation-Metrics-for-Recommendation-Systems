@@ -12,36 +12,34 @@ from torch.utils.data import DataLoader
 
 # importing modules from others class
 from similarity_metrics.config import MODEL_PATH
-from similarity_metrics.ml.data_loader import Sequences, SequencesDataset
-from similarity_metrics.ml.skipgram import SkipGram
+from similarity_metrics.data_loader import Sequences, SequencesDataset
+from similarity_metrics.skipgram import SkipGram
 from similarity_metrics.utils.logger import logger
 
 shuffle = True
 emb_dim = 128
-epochs = 5
+epochs = 3
 initial_lr = 0.025
 
 
-class JaccardIndex(nn.Module):
+class AdjustedCosineSimilarity(nn.Module):
     def __init__(self):
-        super(JaccardIndex, self).__init__()
+        super(AdjustedCosineSimilarity, self).__init__()
 
     def forward(self, x1, x2):
-        # Ensure the vectors are binary
-        x1 = torch.round(torch.sigmoid(x1))
-        x2 = torch.round(torch.sigmoid(x2))
+        # Mean-centering the vectors
+        x1_mean_centered = x1 - x1.mean(dim=1, keepdim=True)
+        x2_mean_centered = x2 - x2.mean(dim=1, keepdim=True)
 
-        intersection = torch.sum(torch.min(x1, x2), dim=1)
-        union = torch.sum(torch.max(x1, x2), dim=1)
-
-        # Calculate the Jaccard Index
-        jaccard_index = intersection / (union + 1e-7)  # Adding a small constant to avoid division by zero
-        return jaccard_index
+        # Compute cosine similarity
+        similarity = F.cosine_similarity(x1_mean_centered, x2_mean_centered, dim=1)
+        return similarity
 
 
 # Torch parameters
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 torch.cuda.set_device(0)
+
 logger.info('Device: {}, emb_dim: {}, epochs: {}, initial_lr: {}'.format(device, emb_dim, epochs, initial_lr))
 
 if __name__ == '__main__':
@@ -107,9 +105,10 @@ if __name__ == '__main__':
                     product2_emb = skipgram.get_center_emb(torch.LongTensor(product2_id).to(device))
 
                     # Example Usage
-                    jaccard_index = JaccardIndex()
-                    jaccard_index_calculations = jaccard_index(product1_emb, product2_emb)
-                    score = roc_auc_score(val_samp['edge'], jaccard_index_calculations.detach().cpu().numpy())
+                    adjusted_cosine_similarity = AdjustedCosineSimilarity()
+                    adjusted_cosine_similarity_calculations = adjusted_cosine_similarity(product1_emb, product2_emb)
+                    score = roc_auc_score(val_samp['edge'],
+                                          adjusted_cosine_similarity_calculations.detach().cpu().numpy())
 
                 logger.info("Epoch: {}, "
                             "Seq: {:,}/{:,}, " \
@@ -132,4 +131,4 @@ if __name__ == '__main__':
 
     # Save results
     results_df = pd.DataFrame(results, columns=['epoch', 'batches', 'loss', 'auc'])
-    results_df.to_csv('{}/model_metrics_jaccard_index_similarity.csv'.format(MODEL_PATH), index=False)
+    results_df.to_csv('{}/model_metrics_adjusted_cosine_similarity.csv'.format(MODEL_PATH), index=False)

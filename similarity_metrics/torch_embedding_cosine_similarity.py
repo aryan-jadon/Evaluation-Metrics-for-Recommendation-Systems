@@ -11,8 +11,8 @@ from torch.utils.data import DataLoader
 
 # importing modules from others class
 from similarity_metrics.config import MODEL_PATH
-from similarity_metrics.ml.data_loader import Sequences, SequencesDataset
-from similarity_metrics.ml.skipgram import SkipGram
+from similarity_metrics.data_loader import Sequences, SequencesDataset
+from similarity_metrics.skipgram import SkipGram
 from similarity_metrics.utils.logger import logger
 
 shuffle = True
