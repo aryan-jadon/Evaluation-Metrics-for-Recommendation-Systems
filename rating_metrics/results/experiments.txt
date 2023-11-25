@@ -1,0 +1,12 @@
+# 50 Epoc
+Root Mean Square Error Metrics: 0.8952
+Mean Squared Error Metrics: 0.8024
+Mean Absolute Percentage Error Metrics: 26.4152
+Mean Absolute Error: 0.7991
+
+# 100 Epoc
+Root Mean Square Error Metrics: 0.9162
+Mean Squared Error Metrics: 0.84716
+Mean Absolute Percentage Error Metrics: 26.9190
+Mean Absolute Error: 0.8358
+
