@@ -1,0 +1,1 @@
+python -m ranking_metrics.evaluate_rankings
