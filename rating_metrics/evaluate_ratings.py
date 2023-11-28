@@ -47,33 +47,20 @@ torch.cuda.manual_seed_all(SEED)
 
 # Movielens data size: 100k, 1m, 10m, or 20m
 # data_sizes = ["100k", "1m", "10m", "20m"]
-data_sizes = ["10m"]
+
+data_sizes = ["100k"]
+
 algorithms = ["als",
-              "sar",
-              "svd",
-              "ncf",
-              "bpr",
-              "bivae",
-              "lightgcn"]
+              "svd"]
 
 environments = {
     "als": "pyspark",
-    "sar": "python_cpu",
-    "svd": "python_cpu",
-    "bpr": "python_cpu",
-    "ncf": "python_gpu",
-    "bivae": "python_gpu",
-    "lightgcn": "python_gpu",
+    "svd": "python_cpu"
 }
 
 metrics = {
-    "als": ["ranking"],
-    "sar": ["ranking"],
-    "svd": ["ranking"],
-    "ncf": ["ranking"],
-    "bpr": ["ranking"],
-    "bivae": ["ranking"],
-    "lightgcn": ["ranking"]
+    "als": ["rating"],
+    "svd": ["rating"]
 }
 
 als_params = {
@@ -89,17 +76,6 @@ als_params = {
     "ratingCol": DEFAULT_RATING_COL,
 }
 
-sar_params = {
-    "similarity_type": "jaccard",
-    "time_decay_coefficient": 30,
-    "time_now": None,
-    "timedecay_formula": True,
-    "col_user": DEFAULT_USER_COL,
-    "col_item": DEFAULT_ITEM_COL,
-    "col_rating": DEFAULT_RATING_COL,
-    "col_timestamp": DEFAULT_TIMESTAMP_COL,
-}
-
 svd_params = {
     "n_factors": 150,
     "n_epochs": 15,
@@ -109,71 +85,14 @@ svd_params = {
     "verbose": False
 }
 
-ncf_params = {
-    "model_type": "NeuMF",
-    "n_factors": 4,
-    "layer_sizes": [16, 8, 4],
-    "n_epochs": 15,
-    "batch_size": 1024,
-    "learning_rate": 1e-3,
-    "verbose": 10
-}
-
-bpr_params = {
-    "k": 200,
-    "max_iter": 200,
-    "learning_rate": 0.01,
-    "lambda_reg": 1e-3,
-    "seed": SEED,
-    "verbose": False
-}
-
-bivae_params = {
-    "k": 100,
-    "encoder_structure": [200],
-    "act_fn": "tanh",
-    "likelihood": "pois",
-    "n_epochs": 500,
-    "batch_size": 1024,
-    "learning_rate": 0.001,
-    "seed": SEED,
-    "use_gpu": True,
-    "verbose": False
-}
-
-lightgcn_param = {
-    "model_type": "lightgcn",
-    "n_layers": 3,
-    "batch_size": 1024,
-    "embed_size": 64,
-    "decay": 0.0001,
-    "epochs": 20,
-    "learning_rate": 0.005,
-    "eval_epoch": 5,
-    "top_k": DEFAULT_K,
-    "metrics": ["recall", "ndcg", "precision", "map"],
-    "save_model": False,
-    "MODEL_DIR": ".",
-}
-
 params = {
     "als": als_params,
-    "sar": sar_params,
-    "svd": svd_params,
-    "ncf": ncf_params,
-    "bpr": bpr_params,
-    "bivae": bivae_params,
-    "lightgcn": lightgcn_param,
+    "svd": svd_params
 }
 
 prepare_training_data = {
     "als": prepare_training_als,
-    "sar": prepare_training_sar,
-    "svd": prepare_training_svd,
-    "ncf": prepare_training_ncf,
-    "bpr": prepare_training_cornac,
-    "bivae": prepare_training_cornac,
-    "lightgcn": prepare_training_lightgcn,
+    "svd": prepare_training_svd
 }
 
 prepare_metrics_data = {
@@ -182,43 +101,35 @@ prepare_metrics_data = {
 
 trainer = {
     "als": lambda params, data: train_als(params, data),
-    "sar": lambda params, data: train_sar(params, data),
-    "svd": lambda params, data: train_svd(params, data),
-    "ncf": lambda params, data: train_ncf(params, data),
-    "bpr": lambda params, data: train_bpr(params, data),
-    "bivae": lambda params, data: train_bivae(params, data),
-    "lightgcn": lambda params, data: train_lightgcn(params, data),
+    "svd": lambda params, data: train_svd(params, data)
 }
 
-ranking_predictor = {
-    "als": lambda model, test, train: recommend_k_als(model, test, train),
-    "sar": lambda model, test, train: recommend_k_sar(model, test, train),
-    "svd": lambda model, test, train: recommend_k_svd(model, test, train),
-    "ncf": lambda model, test, train: recommend_k_ncf(model, test, train),
-    "bpr": lambda model, test, train: recommend_k_cornac(model, test, train),
-    "bivae": lambda model, test, train: recommend_k_cornac(model, test, train),
-    "lightgcn": lambda model, test, train: recommend_k_lightgcn(model, test, train),
+rating_predictor = {
+    "als": lambda model, test: predict_als(model, test),
+    "svd": lambda model, test: predict_svd(model, test)
 }
 
-ranking_evaluator = {
-    "als": lambda test, predictions, k: ranking_metrics_pyspark(test, predictions, k),
-    "sar": lambda test, predictions, k: ranking_metrics_python(test, predictions, k),
-    "svd": lambda test, predictions, k: ranking_metrics_python(test, predictions, k),
-    "ncf": lambda test, predictions, k: ranking_metrics_python(test, predictions, k),
-    "bpr": lambda test, predictions, k: ranking_metrics_python(test, predictions, k),
-    "bivae": lambda test, predictions, k: ranking_metrics_python(test, predictions, k),
-    "lightgcn": lambda test, predictions, k: ranking_metrics_python(test, predictions, k),
+rating_evaluator = {
+    "als": lambda test, predictions: rating_metrics_pyspark(test, predictions),
+    "svd": lambda test, predictions: rating_metrics_python(test, predictions)
 }
 
 
-def generate_summary(data, algo, k, train_time, time_ranking, ranking_metrics):
+def generate_summary(data, algo, k, train_time, time_rating, rating_metrics):
     summary = {"Data": data,
                "Algo": algo,
                "K": k,
                "Train time (s)": train_time,
-               "Recommending time (s)": time_ranking}
-    print(ranking_metrics)
-    summary.update(ranking_metrics)
+               "Predicting time (s)": time_rating}
+
+    if rating_metrics is None:
+        rating_metrics = {
+            "RMSE": np.nan,
+            "MAE": np.nan,
+            "R2": np.nan,
+            "Explained Variance": np.nan,
+        }
+    summary.update(rating_metrics)
     return summary
 
 
@@ -263,24 +174,24 @@ for data_size in data_sizes:
                 # Predict and evaluate
                 train, test = prepare_metrics_data.get(algo, lambda x, y: (x, y))(df_train, df_test)
 
-                if "ranking" in metrics[algo]:
-                    # Predict for ranking
-                    top_k_scores, time_ranking = ranking_predictor[algo](model, test, train)
-                    print(f"Ranking prediction time: {time_ranking}s")
+                if "rating" in metrics[algo]:
+                    # Predict for rating
+                    preds, time_rating = rating_predictor[algo](model, test)
+                    print(f"Rating prediction time: {time_rating}s")
 
-                    # Evaluate for ranking
-                    rankings = ranking_evaluator[algo](test, top_k_scores, DEFAULT_K)
+                    # Evaluate for rating
+                    ratings = rating_evaluator[algo](test, preds)
                 else:
-                    rankings = None
-                    time_ranking = np.nan
+                    ratings = None
+                    time_rating = np.nan
 
                 # Record results
                 algosummary[algo] = generate_summary(data_size,
                                                      algo,
                                                      DEFAULT_K,
                                                      time_train,
-                                                     time_ranking,
-                                                     rankings)
+                                                     time_rating,
+                                                     ratings)
 
                 algosummary[algo]["F1@K"] = 2 * (algosummary[algo]["Precision@k"] * algosummary[algo]["Recall@k"]) / (
                         algosummary[algo]["Precision@k"] + algosummary[algo]["Recall@k"])
@@ -292,7 +203,7 @@ for data_size in data_sizes:
         print(algosummary)
         print("#" * 100)
         df = pd.DataFrame(algosummary)
-        file_name = "ranking_results_{size}.xlsx".format(size=data_size)
+        file_name = "rating_results_{size}.xlsx".format(size=data_size)
         df.to_excel(file_name)
     except Exception as e:
         print(e)
