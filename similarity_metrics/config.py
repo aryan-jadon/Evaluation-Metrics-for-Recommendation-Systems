@@ -1,2 +1,2 @@
-DATA_PATH = 'data'
-MODEL_PATH = 'model'
+DATA_PATH = 'similarity_metrics/data'
+MODEL_PATH = 'similarity_metrics/model'
