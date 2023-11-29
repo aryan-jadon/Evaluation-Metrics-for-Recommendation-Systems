@@ -37,7 +37,7 @@ from recommenders.evaluation.python_evaluation import (
     average_recall_at_k,
     average_precision_at_k
 )
-from recommenders.evaluation.python_evaluation import rmse, mae, rsquared, exp_var
+from recommenders.evaluation.python_evaluation import rmse, mae, rsquared, exp_var, mse, mape
 from recommenders.utils.spark_utils import start_or_get_spark
 from recommenders.evaluation.spark_evaluation import (
     SparkRatingEvaluation,
@@ -373,33 +373,46 @@ def recommend_k_lightgcn(model, test, train, top_k=DEFAULT_K, remove_seen=True):
 
 def rating_metrics_pyspark(test, predictions):
     rating_eval = SparkRatingEvaluation(test, predictions, **COL_DICT)
-    return {
+    evaluation = {
         "RMSE": rating_eval.rmse(),
         "MAE": rating_eval.mae(),
+        "MSE": rating_eval.mse(),
+        "MAPE": rating_eval.mape(),
         "R2": rating_eval.exp_var(),
-        "Explained Variance": rating_eval.rsquared(),
+        "Explained Variance": rating_eval.rsquared()
     }
+    print(evaluation)
+    return evaluation
+
+
+def rating_metrics_python(test, predictions):
+    evaluation = {
+        "RMSE": rmse(test, predictions, **COL_DICT),
+        "MAE": mae(test, predictions, **COL_DICT),
+        "MSE": mse(test, predictions, **COL_DICT),
+        "MAPE": mape(test, predictions, **COL_DICT),
+        "R2": rsquared(test, predictions, **COL_DICT),
+        "Explained Variance": exp_var(test, predictions, **COL_DICT)
+    }
+    print(evaluation)
+    return evaluation
 
 
 def ranking_metrics_pyspark(test, predictions, k=DEFAULT_K):
     rank_eval = SparkRankingEvaluation(
         test, predictions, k=k, relevancy_method="top_k", **COL_DICT
     )
-    return {
+    evaluations = {
         "MAP": rank_eval.map_at_k(),
-        "nDCG@k": rank_eval.ndcg_at_k(),
+        "MRR": rank_eval.mrr_at_k(),
+        "ARHR@k": rank_eval.arhr_at_k(),
+        "Average_Recall@k": rank_eval.average_recall_at_k(),
+        "Average_Precision@k": rank_eval.average_precision_at_k(),
         "Precision@k": rank_eval.precision_at_k(),
         "Recall@k": rank_eval.recall_at_k(),
+        "nDCG@k": rank_eval.ndcg_at_k(),
     }
-
-
-def rating_metrics_python(test, predictions):
-    return {
-        "RMSE": rmse(test, predictions, **COL_DICT),
-        "MAE": mae(test, predictions, **COL_DICT),
-        "R2": rsquared(test, predictions, **COL_DICT),
-        "Explained Variance": exp_var(test, predictions, **COL_DICT),
-    }
+    return evaluations
 
 
 def ranking_metrics_python(test, predictions, k=DEFAULT_K):
@@ -411,5 +424,5 @@ def ranking_metrics_python(test, predictions, k=DEFAULT_K):
         "Recall@k": recall_at_k(test, predictions, k=k, **COL_DICT),
         "Average_Recall@k": average_recall_at_k(test, predictions, k=k, **COL_DICT),
         "Average_Precision@k": average_precision_at_k(test, predictions, k=k, **COL_DICT),
-        "nDCG@k": ndcg_at_k(test, predictions, k=k, **COL_DICT),
+        "nDCG@k": ndcg_at_k(test, predictions, k=k, **COL_DICT)
     }

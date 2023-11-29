@@ -18,7 +18,7 @@ from recommenders.datasets.python_splitters import python_stratified_split
 from recommenders.utils.spark_utils import start_or_get_spark
 from recommenders.utils.gpu_utils import get_cuda_version, get_cudnn_version
 
-from ranking_metrics.benchmark_utils import *
+from rating_metrics.benchmark_utils import *
 
 tf.get_logger().setLevel('ERROR')
 warnings.filterwarnings("ignore")
@@ -48,7 +48,7 @@ torch.cuda.manual_seed_all(SEED)
 # Movielens data size: 100k, 1m, 10m, or 20m
 # data_sizes = ["100k", "1m", "10m", "20m"]
 
-data_sizes = ["100k"]
+data_sizes = ["100k", "1m", "10m", "20m"]
 
 algorithms = ["als",
               "svd"]
@@ -126,6 +126,8 @@ def generate_summary(data, algo, k, train_time, time_rating, rating_metrics):
         rating_metrics = {
             "RMSE": np.nan,
             "MAE": np.nan,
+            "MSE": np.nan,
+            "MAPE": np.nan,
             "R2": np.nan,
             "Explained Variance": np.nan,
         }
@@ -181,6 +183,9 @@ for data_size in data_sizes:
 
                     # Evaluate for rating
                     ratings = rating_evaluator[algo](test, preds)
+                    print("*"*10)
+                    print(ratings)
+                    print("*" * 10)
                 else:
                     ratings = None
                     time_rating = np.nan
@@ -192,9 +197,6 @@ for data_size in data_sizes:
                                                      time_train,
                                                      time_rating,
                                                      ratings)
-
-                algosummary[algo]["F1@K"] = 2 * (algosummary[algo]["Precision@k"] * algosummary[algo]["Recall@k"]) / (
-                        algosummary[algo]["Precision@k"] + algosummary[algo]["Recall@k"])
             except Exception as e:
                 print(e)
 
