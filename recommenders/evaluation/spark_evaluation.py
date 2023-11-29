@@ -163,6 +163,27 @@ class SparkRatingEvaluation:
         # numpy divide is more tolerant to var2 being zero
         return 1 - np.divide(var1, var2)
 
+    def mse(self):
+        """Calculate Mean Squared Error (MSE).
+
+        Returns:
+            float: Mean Squared Error.
+        """
+        return self.metrics.meanSquaredError
+
+    def mape(self):
+        """Calculate Mean Absolute Percentage Error (MAPE).
+
+        Returns:
+            float: Mean Absolute Percentage Error.
+        """
+        mape_df = self.y_pred_true.withColumn(
+            "ape",
+            F.abs((F.col("label") - F.col("prediction")) / F.col("label"))
+        )
+        mape = mape_df.select(F.avg("ape")).first()[0]
+        return mape * 100  # To convert to percentage
+
 
 class SparkRankingEvaluation:
     """Spark Ranking Evaluator"""
@@ -346,6 +367,52 @@ class SparkRankingEvaluation:
         ndcg = self._metrics.ndcgAt(self.k)
 
         return ndcg
+
+    def mrr_at_k(self):
+        """Calculate Mean Reciprocal Rank (MRR) at k."""
+        df_hit = self._items_for_user_all.withColumn(
+            "first_hit", F.expr(f"filter({self.col_prediction}, x -> array_contains(ground_truth, x))")
+        )
+        df_hit = df_hit.withColumn("rank_first_hit", F.expr(f"array_position({self.col_prediction}, first_hit[0])"))
+        df_hit = df_hit.withColumn("reciprocal_rank",
+                                   F.when(df_hit.rank_first_hit > 0, 1.0 / df_hit.rank_first_hit).otherwise(0.0))
+        mrr = df_hit.select(F.mean("reciprocal_rank")).collect()[0][0]
+
+        return mrr
+
+    def arhr_at_k(self):
+        """Calculate Average Reciprocal Hit Rank (ARHR) at k."""
+        df_hit = self._items_for_user_all.withColumn(
+            "hits", F.expr(f"filter({self.col_prediction}, x -> array_contains(ground_truth, x))")
+        )
+        df_hit = df_hit.withColumn("rank_hits",
+                                   F.expr(f"transform(hits, x -> array_position({self.col_prediction}, x))"))
+        df_hit = df_hit.withColumn("reciprocal_ranks", F.expr("transform(rank_hits, x -> 1.0 / x)"))
+        df_hit = df_hit.withColumn("arhr", F.aggregate("reciprocal_ranks", F.lit(0.0), F.sum))
+        arhr = df_hit.select(F.mean("arhr")).collect()[0][0]
+
+        return arhr
+
+    def average_recall_at_k(self):
+        """Calculate Average Recall at k."""
+        # This can be similar to the existing recall_at_k method,
+        # but you might want to refactor the existing recall calculation
+        # into a separate method to avoid code duplication.
+        return self.recall_at_k()
+
+    def average_precision_at_k(self):
+        """Calculate Average Precision at k."""
+        df_hit = self._items_for_user_all.withColumn(
+            "hits", F.expr(f"filter({self.col_prediction}, x -> array_contains(ground_truth, x))")
+        )
+        df_hit = df_hit.withColumn("cumulative_hits", F.expr("transform(hits, x -> array_position(prediction, x))"))
+        df_hit = df_hit.withColumn("precision_at_hits", F.expr(
+            "transform(cumulative_hits, x -> size(filter(cumulative_hits, y -> y <= x)) / x)"))
+        df_hit = df_hit.withColumn("avg_precision",
+                                   F.aggregate("precision_at_hits", F.lit(0.0), F.sum) / F.size("precision_at_hits"))
+        avg_precision = df_hit.select(F.mean("avg_precision")).collect()[0][0]
+
+        return avg_precision
 
     def map_at_k(self):
         """Get mean average precision at k.

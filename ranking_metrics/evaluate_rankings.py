@@ -54,7 +54,8 @@ algorithms = ["als",
               "ncf",
               "bpr",
               "bivae",
-              "lightgcn"]
+              "lightgcn"
+              ]
 
 environments = {
     "als": "pyspark",

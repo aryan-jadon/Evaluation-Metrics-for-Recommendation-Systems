@@ -30,6 +30,7 @@ from recommenders.datasets.pandas_df_utils import (
     has_same_base_dtype,
     lru_cache_df,
 )
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, explained_variance_score
 
 
 def _check_column_dtypes(func):
@@ -261,6 +262,62 @@ def exp_var(
         col_prediction=col_prediction,
     )
     return explained_variance_score(y_true, y_pred)
+
+
+def mse(
+        rating_true,
+        rating_pred,
+        col_user=DEFAULT_USER_COL,
+        col_item=DEFAULT_ITEM_COL,
+        col_rating=DEFAULT_RATING_COL,
+        col_prediction=DEFAULT_PREDICTION_COL,
+):
+    """Calculate Mean Squared Error.
+
+    Args:
+        rating_true, rating_pred, col_user, col_item, col_rating, col_prediction: Same as in rmse.
+
+    Returns:
+        float: Mean Squared Error.
+    """
+
+    y_true, y_pred = merge_rating_true_pred(
+        rating_true=rating_true,
+        rating_pred=rating_pred,
+        col_user=col_user,
+        col_item=col_item,
+        col_rating=col_rating,
+        col_prediction=col_prediction,
+    )
+    return mean_squared_error(y_true, y_pred)
+
+
+def mape(
+        rating_true,
+        rating_pred,
+        col_user=DEFAULT_USER_COL,
+        col_item=DEFAULT_ITEM_COL,
+        col_rating=DEFAULT_RATING_COL,
+        col_prediction=DEFAULT_PREDICTION_COL,
+):
+    """Calculate Mean Absolute Percentage Error.
+
+    Args:
+        rating_true, rating_pred, col_user, col_item, col_rating, col_prediction: Same as in rmse.
+
+    Returns:
+        float: Mean Absolute Percentage Error.
+    """
+
+    y_true, y_pred = merge_rating_true_pred(
+        rating_true=rating_true,
+        rating_pred=rating_pred,
+        col_user=col_user,
+        col_item=col_item,
+        col_rating=col_rating,
+        col_prediction=col_prediction,
+    )
+    return np.mean(np.abs((y_true - y_pred) / y_true)) * 100  # Multiply by 100 to get percentage
 
 
 def auc(
