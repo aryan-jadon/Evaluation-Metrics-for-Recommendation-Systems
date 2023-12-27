@@ -46,12 +46,9 @@ torch.manual_seed(SEED)
 torch.cuda.manual_seed_all(SEED)
 
 # Movielens data size: 100k, 1m, 10m, or 20m
-# data_sizes = ["100k", "1m", "10m", "20m"]
-
 data_sizes = ["100k", "1m", "10m", "20m"]
 
-algorithms = ["als",
-              "svd"]
+algorithms = ["als", "svd"]
 
 environments = {
     "als": "pyspark",

@@ -1,12 +1,7 @@
+import gc
 import warnings
 import logging
-import os
 import sys
-import json
-import numpy as np
-import pandas as pd
-import seaborn as sns
-import scrapbook as sb
 import surprise
 import cornac
 import pyspark
@@ -15,11 +10,10 @@ import torch
 from recommenders.datasets import movielens
 from recommenders.utils.general_utils import get_number_processors
 from recommenders.datasets.python_splitters import python_stratified_split
-from recommenders.utils.spark_utils import start_or_get_spark
 from recommenders.utils.gpu_utils import get_cuda_version, get_cudnn_version
-
 from ranking_metrics.benchmark_utils import *
 
+# Set log levels to prevent unnecessary logging
 tf.get_logger().setLevel('ERROR')
 warnings.filterwarnings("ignore")
 logging.basicConfig(level=logging.ERROR)
@@ -36,26 +30,32 @@ print(f"CuDNN version: {get_cudnn_version()}")
 print(f"TensorFlow version: {tf.__version__}")
 print(f"PyTorch version: {torch.__version__}")
 
-spark = start_or_get_spark("PySpark-Ranking-Experiment", memory="32g")
+# Initialize Spark with limited memory usage
+spark = pyspark.sql.SparkSession.builder \
+    .appName("PySpark-Ranking-Experiment") \
+    .config("spark.driver.memory", "4g") \
+    .config("spark.executor.memory", "4g") \
+    .getOrCreate()
 spark.conf.set("spark.sql.analyzer.failAmbiguousSelfJoin", "false")
 
-# fix random seeds to make sure out runs are reproducible
+# Set random seeds for reproducibility
+SEED = 42
 np.random.seed(SEED)
 tf.random.set_seed(SEED)
 torch.manual_seed(SEED)
 torch.cuda.manual_seed_all(SEED)
 
 # Movielens data size: 100k, 1m, 10m, or 20m
-# data_sizes = ["100k", "1m", "10m", "20m"]
-data_sizes = ["10m"]
-algorithms = ["als",
-              "sar",
-              "svd",
-              "ncf",
-              "bpr",
-              "bivae",
-              "lightgcn"
-              ]
+data_sizes = ["100k", "1m", "10m", "20m"]
+algorithms = [
+    "als",
+    "sar",
+    "svd",
+    "ncf",
+    "bpr",
+    "bivae",
+    "lightgcn"
+]
 
 environments = {
     "als": "pyspark",
@@ -228,13 +228,11 @@ algosummary = {}
 for data_size in data_sizes:
     try:
         print("Working on Data Size" + str(data_size))
-
         # Load the dataset
         df = movielens.load_pandas_df(
             size=data_size,
             header=[DEFAULT_USER_COL, DEFAULT_ITEM_COL, DEFAULT_RATING_COL, DEFAULT_TIMESTAMP_COL]
         )
-
         print("Size of Movielens {}: {}".format(data_size, df.shape))
 
         # Split the dataset
@@ -285,16 +283,25 @@ for data_size in data_sizes:
 
                 algosummary[algo]["F1@K"] = 2 * (algosummary[algo]["Precision@k"] * algosummary[algo]["Recall@k"]) / (
                         algosummary[algo]["Precision@k"] + algosummary[algo]["Recall@k"])
+
+                print("#" * 100)
+                print("Complete Summary on DataSet")
+                print(algosummary)
+                print("#" * 100)
+
+                df = pd.DataFrame(algosummary)
+                file_name = "ranking_results_{algo}_{size}.xlsx".format(algo=algo, size=data_size)
+                df.to_excel(file_name)
+
+                del train
+                del test
+                del model_params
+                del model
+                del time_train
+                # Garbage collection
+                gc.collect()
             except Exception as e:
                 print(e)
-
-        print("#" * 100)
-        print("Complete Summary on DataSet")
-        print(algosummary)
-        print("#" * 100)
-        df = pd.DataFrame(algosummary)
-        file_name = "ranking_results_{size}.xlsx".format(size=data_size)
-        df.to_excel(file_name)
     except Exception as e:
         print(e)
 
