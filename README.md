@@ -1,5 +1,6 @@
 # Evaluation Metrics for Recommendation Systems
 
+[![DOI](https://zenodo.org/badge/692223902.svg)](https://zenodo.org/doi/10.5281/zenodo.10436717)
 
 ```
 This repository contains the implementation of evaluation metrics for recommendation systems.
