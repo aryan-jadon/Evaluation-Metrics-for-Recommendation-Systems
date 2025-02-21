@@ -17,17 +17,19 @@ Majority of this repository work is taken from - https://github.com/recommenders
 
 ### Cite Our Paper
 ```
-@misc{jadon2023comprehensive,
-      title={A Comprehensive Survey of Evaluation Techniques for Recommendation Systems}, 
-      author={Aryan Jadon and Avinash Patil},
-      year={2023},
-      eprint={2312.16015},
-      archivePrefix={arXiv},
-      primaryClass={cs.IR}
+@inproceedings{jadon2024comprehensive,
+  title={A comprehensive survey of regression-based loss functions for time series forecasting},
+  author={Jadon, Aryan and Patil, Avinash and Jadon, Shruti},
+  booktitle={International Conference on Data Management, Analytics \& Innovation},
+  pages={117--147},
+  year={2024},
+  organization={Springer}
 }
 ```
 
-### Paper Link - https://arxiv.org/abs/2312.16015
+### Paper Links
+1. https://link.springer.com/chapter/10.1007/978-981-97-3245-6_9
+2. https://arxiv.org/abs/2211.02989
 
 ## Summary of Experiments
 
