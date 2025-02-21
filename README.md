@@ -18,18 +18,18 @@ Majority of this repository work is taken from - https://github.com/recommenders
 ### Cite Our Paper
 ```
 @inproceedings{jadon2024comprehensive,
-  title={A comprehensive survey of regression-based loss functions for time series forecasting},
-  author={Jadon, Aryan and Patil, Avinash and Jadon, Shruti},
-  booktitle={International Conference on Data Management, Analytics \& Innovation},
-  pages={117--147},
+  title={A comprehensive survey of evaluation techniques for recommendation systems},
+  author={Jadon, Aryan and Patil, Avinash},
+  booktitle={International Conference on Computation of Artificial Intelligence \& Machine Learning},
+  pages={281--304},
   year={2024},
   organization={Springer}
 }
 ```
 
 ### Paper Links
-1. https://link.springer.com/chapter/10.1007/978-981-97-3245-6_9
-2. https://arxiv.org/abs/2211.02989
+1. https://link.springer.com/chapter/10.1007/978-3-031-71484-9_25
+2. https://arxiv.org/abs/2312.16015
 
 ## Summary of Experiments
 
